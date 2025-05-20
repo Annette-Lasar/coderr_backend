@@ -2,7 +2,7 @@ from rest_framework import viewsets, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.authtoken.models import Token
-from rest_framework.permissions import AllowAny
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from django.contrib.auth import authenticate
 from django.contrib.auth import get_user_model
 from .serializers import (UserProfileSerializer,
@@ -27,6 +27,14 @@ class CustomerProfileViewSet(UserProfileViewSet):
         return User.objects.filter(user_type='customer')
 
 
+class SingleUserProfileViewSet(viewsets.ReadOnlyModelViewSet):
+    serializer_class = UserProfileSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        return User.objects.filter(id=self.request.user.id)
+
+
 class RegistrationView(APIView):
     permission_classes = [AllowAny]
 
@@ -34,7 +42,14 @@ class RegistrationView(APIView):
         serializer = RegistrationSerializer(data=request.data)
         if serializer.is_valid():
             user = serializer.save()
-            return Response({"message": "User created successfully."}, status=status.HTTP_201_CREATED)
+            token, created = Token.objects.get_or_create(user=user)
+
+            return Response({
+                "token": token.key,
+                "user_id": user.id,
+                "username": user.username
+            }, status=status.HTTP_201_CREATED)
+
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
@@ -51,7 +66,7 @@ class LoginView(APIView):
             token, created = Token.objects.get_or_create(user=user)
             return Response({
                 "token": token.key,
-                "userId": user.id,
+                "user_id": user.id,
                 "username": user.username
             }, status=status.HTTP_200_OK)
         else:

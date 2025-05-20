@@ -5,9 +5,23 @@ User = get_user_model()
 
 
 class UserProfileSerializer(serializers.ModelSerializer):
+    type = serializers.CharField(source='user_type') 
     class Meta:
         model = User
-        fields = '__all__'
+        fields = [
+            'id',
+            'username',
+            'email',
+            'first_name',
+            'last_name',
+            'type',
+            'file',
+            'tel',
+            'location',
+            'description',
+            'availability',
+            'created_at'
+        ]
 
 
 class RegistrationSerializer(serializers.ModelSerializer):
@@ -19,17 +33,18 @@ class RegistrationSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = ["username", "email", "password", "repeated_password", "type"]
-        
+
     def validate(self, data):
         if data["password"] != data["repeated_password"]:
-            raise serializers.ValidationError("Die Passwörter stimmen nicht überein.")
+            raise serializers.ValidationError(
+                "Die Passwörter stimmen nicht überein.")
         return data
 
     def create(self, validated_data):
         validated_data.pop("repeated_password")
         user_type = validated_data.pop("type")
         password = validated_data.pop("password")
-        
+
         user = User(**validated_data)
         user.user_type = user_type
         user.set_password(password)
