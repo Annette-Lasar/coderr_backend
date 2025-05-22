@@ -1,38 +1,70 @@
-from rest_framework import viewsets, status
+from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.authtoken.models import Token
 from rest_framework.permissions import AllowAny, IsAuthenticated
+from utils.pagination import SixPerPagePagination
 from django.contrib.auth import authenticate
 from django.contrib.auth import get_user_model
-from .serializers import (UserProfileSerializer,
+from .serializers import (WrappedUserSerializer,
+                          UserProfileSerializer,
                           RegistrationSerializer)
 
 
 User = get_user_model()
 
 
-class UserProfileViewSet(viewsets.ModelViewSet):
-    queryset = User.objects.all()
-    serializer_class = UserProfileSerializer
-
-
-class BusinessProfileViewSet(UserProfileViewSet):
-    def get_queryset(self):
-        return User.objects.filter(user_type='business')
-
-
-class CustomerProfileViewSet(UserProfileViewSet):
-    def get_queryset(self):
-        return User.objects.filter(user_type='customer')
-
-
-class SingleUserProfileViewSet(viewsets.ReadOnlyModelViewSet):
-    serializer_class = UserProfileSerializer
+# liefert das eigene Profil des eingeloggten Nutzers (z.B. laura)
+class OwnProfileView(APIView):
     permission_classes = [IsAuthenticated]
 
-    def get_queryset(self):
-        return User.objects.filter(id=self.request.user.id)
+    def get(self, request):
+        serializer = UserProfileSerializer(request.user)
+        return Response({"user": serializer.data}) 
+
+    def patch(self, request):
+        serializer = UserProfileSerializer(
+            request.user, data=request.data, partial=True
+        )
+        if serializer.is_valid():
+            serializer.save()
+            return Response({"user": serializer.data})  
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class UserProfileDetailView(APIView):
+    # oder IsAuthenticated, je nach Sichtbarkeit
+    permission_classes = [AllowAny]
+
+    def get(self, request, pk):
+        try:
+            user = User.objects.get(pk=pk)
+        except User.DoesNotExist:
+            return Response({'detail': 'Benutzer nicht gefunden.'}, status=404)
+
+        serializer = UserProfileSerializer(user)
+        return Response({"user": serializer.data}) 
+
+class BusinessProfileListView(APIView):
+    def get(self, request):
+        users = User.objects.filter(
+            user_type='business').order_by('-created_at')
+        paginator = SixPerPagePagination()
+        result_page = paginator.paginate_queryset(users, request)
+        wrapped_users = [{"user": u} for u in result_page]
+        serializer = WrappedUserSerializer(wrapped_users, many=True)
+        return Response(serializer.data)
+
+
+class CustomerProfileListView(APIView):
+    def get(self, request):
+        users = User.objects.filter(
+            user_type='customer').order_by('-created_at')
+        paginator = SixPerPagePagination()
+        result_page = paginator.paginate_queryset(users, request)
+        wrapped_users = [{"user": u} for u in result_page]
+        serializer = WrappedUserSerializer(wrapped_users, many=True)
+        return Response(serializer.data)
 
 
 class RegistrationView(APIView):

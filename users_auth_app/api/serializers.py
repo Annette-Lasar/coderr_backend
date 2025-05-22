@@ -5,11 +5,16 @@ User = get_user_model()
 
 
 class UserProfileSerializer(serializers.ModelSerializer):
-    type = serializers.CharField(source='user_type') 
+    tel = serializers.CharField(required=True)
+    pk = serializers.IntegerField(source='id')
+    type = serializers.CharField(source='user_type')
+    working_hours = serializers.CharField(source='availability', required=False)
+
     class Meta:
         model = User
         fields = [
             'id',
+            'pk',
             'username',
             'email',
             'first_name',
@@ -19,9 +24,19 @@ class UserProfileSerializer(serializers.ModelSerializer):
             'tel',
             'location',
             'description',
-            'availability',
+            'working_hours',
             'created_at'
         ]
+    
+    def validate_tel(self, value):
+        if not value:
+            raise serializers.ValidationError("Telefonnummer ist erforderlich.")
+        return value
+
+
+
+class WrappedUserSerializer(serializers.Serializer):
+    user = UserProfileSerializer()
 
 
 class RegistrationSerializer(serializers.ModelSerializer):
@@ -33,6 +48,9 @@ class RegistrationSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = ["username", "email", "password", "repeated_password", "type"]
+        extra_kwargs = {
+        'email': {'required': True},
+    }
 
     def validate(self, data):
         if data["password"] != data["repeated_password"]:

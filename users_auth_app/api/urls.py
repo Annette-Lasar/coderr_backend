@@ -1,20 +1,19 @@
-from django.urls import path, include
-from rest_framework.routers import DefaultRouter
-from .views import (SingleUserProfileViewSet,
-                    BusinessProfileViewSet,
-                    CustomerProfileViewSet,
+from django.urls import path
+from .views import (OwnProfileView,
+                    UserProfileDetailView,
+                    BusinessProfileListView,
+                    CustomerProfileListView,
                     RegistrationView,
                     LoginView)
 
-router = DefaultRouter()
-router.register(r'profile', SingleUserProfileViewSet, basename='user-profile')
 
 urlpatterns = [
-    path('', include(router.urls)),
-    path('profiles/business/',
-         BusinessProfileViewSet.as_view({'get': 'list'})),
-    path('profiles/customer/',
-         CustomerProfileViewSet.as_view({'get': 'list'})),
-    path('registration/', RegistrationView.as_view()),
-    path('login/', LoginView.as_view()),
+    path('profile/', OwnProfileView.as_view(), name='own-profile'),
+    path('profile/<int:pk>/', UserProfileDetailView.as_view(), name='profile-detail'),
+    path('profiles/business/', BusinessProfileListView.as_view(),
+         name='business-profiles'),
+    path('profiles/customer/', CustomerProfileListView.as_view(),
+         name='customer-profiles'),
+    path('registration/', RegistrationView.as_view(), name='registration'),
+    path('login/', LoginView.as_view(), name='login'),
 ]

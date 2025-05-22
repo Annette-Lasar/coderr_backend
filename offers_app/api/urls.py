@@ -1,13 +1,12 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
-from .views import OfferViewSet, OfferDetailViewSet
+from .views import OfferViewSet
 from django.conf import settings
 from django.conf.urls.static import static
 
 
 router = DefaultRouter()
-router.register(r'offers', OfferViewSet, basename='offers')
-router.register(r'offerdetails', OfferDetailViewSet, basename="offerdetails")
+router.register(r'', OfferViewSet, basename='offers')
 
 urlpatterns = [
     path('', include(router.urls)),
