@@ -1,71 +1,170 @@
 from rest_framework import serializers
-from django.contrib.auth import get_user_model
-
-User = get_user_model()
+from users_auth_app.models import UserProfileModel
+from django.contrib.auth.models import User
+from django.contrib.auth import authenticate
+from rest_framework.authtoken.models import Token
+from django.conf import settings
 
 
 class UserProfileSerializer(serializers.ModelSerializer):
-    tel = serializers.CharField(required=True)
-    pk = serializers.IntegerField(source='id')
+    username = serializers.CharField(source="user.username", read_only=True)
+    first_name = serializers.CharField(
+        source="user.first_name", required=False, allow_blank=True)
+    last_name = serializers.CharField(
+        source="user.last_name", required=False, allow_blank=True)
     type = serializers.CharField(source='user_type')
-    working_hours = serializers.CharField(source='availability', required=False)
+    working_hours = serializers.CharField(
+        source='availability', required=False)
+    file = serializers.SerializerMethodField()
 
     class Meta:
-        model = User
+        model = UserProfileModel
         fields = [
             'id',
-            'pk',
+            'user',
             'username',
-            'email',
             'first_name',
             'last_name',
-            'type',
+            'name',
             'file',
-            'tel',
             'location',
+            'tel',
             'description',
             'working_hours',
-            'created_at'
+            'type',
+            'email',
+            'created_at',
         ]
-    
-    def validate_tel(self, value):
-        if not value:
-            raise serializers.ValidationError("Telefonnummer ist erforderlich.")
-        return value
 
+    def update(self, instance, validated_data):
+        user_data = validated_data.pop("user", {})
 
-
-class WrappedUserSerializer(serializers.Serializer):
-    user = UserProfileSerializer()
-
-
-class RegistrationSerializer(serializers.ModelSerializer):
-    password = serializers.CharField(write_only=True)
-    repeated_password = serializers.CharField(write_only=True)
-    type = serializers.ChoiceField(
-        choices=[("business", "Business"), ("customer", "Customer")])
-
-    class Meta:
-        model = User
-        fields = ["username", "email", "password", "repeated_password", "type"]
-        extra_kwargs = {
-        'email': {'required': True},
-    }
-
-    def validate(self, data):
-        if data["password"] != data["repeated_password"]:
-            raise serializers.ValidationError(
-                "Die Passwörter stimmen nicht überein.")
-        return data
-
-    def create(self, validated_data):
-        validated_data.pop("repeated_password")
-        user_type = validated_data.pop("type")
-        password = validated_data.pop("password")
-
-        user = User(**validated_data)
-        user.user_type = user_type
-        user.set_password(password)
+        user = instance.user
+        if "username" in user_data:
+            user.username = user_data["username"]
+        if "first_name" in user_data:
+            user.first_name = user_data["first_name"]
+        if "last_name" in user_data:
+            user.last_name = user_data["last_name"]
         user.save()
 
-        return user
+        return super().update(instance, validated_data)
+
+    def get_file(self, obj):
+        if obj.file:
+            return f"{settings.MEDIA_URL}{obj.file}"
+        return None
+
+
+class RegistrationSerializer(serializers.Serializer):
+    username = serializers.CharField(max_length=150, required=True)
+    email = serializers.EmailField(required=True)
+    password = serializers.CharField(
+        write_only=True, required=True, min_length=6)
+    repeated_password = serializers.CharField(
+        write_only=True, required=True, min_length=6)
+    type = serializers.ChoiceField(
+        choices=UserProfileModel.USER_TYPES, default='customer')
+
+    def validate_username(self, value):
+        if User.objects.filter(username=value).exists():
+            raise serializers.ValidationError(
+                "Dieser Benutzername ist bereits vergeben.")
+        return value
+
+    def validate_email(self, value):
+        if User.objects.filter(email=value).exists():
+            raise serializers.ValidationError(
+                "Diese E-Mail-Adresse wird bereits verwendet.")
+        return value
+
+    def validate(self, data):
+        if data['password'] != data['repeated_password']:
+            raise serializers.ValidationError(
+                {"repeated_password": "Die Passwörter stimmen nicht überein."})
+        return data
+
+
+class LoginSerializer(serializers.Serializer):
+    username = serializers.CharField(required=True)
+    password = serializers.CharField(write_only=True, required=True)
+
+    def validate(self, data):
+        username = data.get("username")
+        password = data.get("password")
+
+        if not username or not password:
+            raise serializers.ValidationError(
+                {"detail": ["Benutzername und Passwort sind erforderlich."]})
+
+        user = authenticate(username=username, password=password)
+
+        if user is None:
+            raise serializers.ValidationError(
+                {"detail": ["Ungültige Anmeldeinformationen."]})
+
+        token, created = Token.objects.get_or_create(user=user)
+
+        return {
+            "token": token.key,
+            "user_id": user.id,
+            "username": user.username,
+            "email": user.email
+        }
+
+
+class BusinessUserListSerializer(serializers.ModelSerializer):
+    user = serializers.SerializerMethodField()
+    file = serializers.SerializerMethodField()
+    working_hours = serializers.CharField(
+        source='availability', required=False)
+    type = serializers.CharField(source='user_type')
+
+    class Meta:
+        model = UserProfileModel
+        fields = ['user', 'file', 'location', 'tel',
+                  'description', 'working_hours', 'type']
+
+    def get_user(self, obj):
+        return {
+            "pk": obj.user.pk,
+            "username": obj.user.username,
+            "first_name": obj.user.first_name,
+            "last_name": obj.user.last_name
+        }
+
+    def get_file(self, obj):
+        if obj.file:
+            return f"{settings.MEDIA_URL}{obj.file}"
+        return None
+
+
+class CustomerUserListSerializer(serializers.ModelSerializer):
+    user = serializers.SerializerMethodField()
+    file = serializers.SerializerMethodField()
+    uploaded_at = serializers.SerializerMethodField()
+    type = serializers.CharField(source='user_type')
+
+    class Meta:
+        model = UserProfileModel
+        fields = ['user', 'file', 'location', 'tel',
+                  'description', 'uploaded_at', 'type']
+
+    def get_user(self, obj):
+        return {
+            "pk": obj.user.pk,
+            "username": obj.user.username,
+            "first_name": obj.user.first_name,
+            "last_name": obj.user.last_name
+        }
+
+    def get_file(self, obj):
+        if obj.file:
+            return f"{settings.MEDIA_URL}{obj.file}"
+        return None
+
+    def get_uploaded_at(self, obj):
+        return obj.created_at
+
+
+

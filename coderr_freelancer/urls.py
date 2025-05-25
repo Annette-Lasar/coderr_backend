@@ -22,12 +22,12 @@ from django.urls import path, include
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/', include('users_auth_app.api.urls')),
-    path('api/offers/', include('offers_app.api.urls')),
-    path('api/offerdetails/', include('offers_app.api.offerdetail_urls')),
-    path('api/orders/', include('orders_app.api.urls')),
-    path('api/reviews/', include('reviews_app.api.urls')),
+    path('api/', include('base_info_app.api.urls')),
+    path('api/', include('offers_app.api.urls')),
+    path('api/', include('orders_app.api.urls')),
+    path('api/', include('reviews_app.api.urls')),
 ]
 
-if settings.DEBUG:
-    urlpatterns += static(settings.MEDIA_URL,
-                          document_root=settings.MEDIA_ROOT)
+urlpatterns += static(settings.MEDIA_URL,
+                      document_root=settings.MEDIA_ROOT)
+

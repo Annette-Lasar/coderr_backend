@@ -1,19 +1,17 @@
 from django.urls import path
-from .views import (OwnProfileView,
-                    UserProfileDetailView,
-                    BusinessProfileListView,
-                    CustomerProfileListView,
+from .views import (UserProfileDetailView,
+                    BusinessUserListView,
+                    CustomerUserListView,
                     RegistrationView,
                     LoginView)
 
 
 urlpatterns = [
-    path('profile/', OwnProfileView.as_view(), name='own-profile'),
-    path('profile/<int:pk>/', UserProfileDetailView.as_view(), name='profile-detail'),
-    path('profiles/business/', BusinessProfileListView.as_view(),
-         name='business-profiles'),
-    path('profiles/customer/', CustomerProfileListView.as_view(),
-         name='customer-profiles'),
+    path('profile/<int:pk>/', UserProfileDetailView.as_view(), name='userprofile-detail'),
+    path('profiles/business/', BusinessUserListView.as_view(),
+         name='business-user-list'),
+    path('profiles/customer/', CustomerUserListView.as_view(),
+         name='customer-user-list'),
     path('registration/', RegistrationView.as_view(), name='registration'),
     path('login/', LoginView.as_view(), name='login'),
 ]

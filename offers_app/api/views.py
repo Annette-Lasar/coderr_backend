@@ -1,28 +1,50 @@
-from rest_framework import viewsets
+from rest_framework import viewsets, filters
 from rest_framework.permissions import IsAuthenticated
-from ..models import Offer, OfferDetail
-from .serializers import OfferSerializer, OfferDetailSerializer
+from django_filters.rest_framework import DjangoFilterBackend
+from django.db.models import Min
+
+from offers_app.models import Offer, OfferDetail
+from offers_app.api.serializers import OfferSerializer, OfferDetailsSerializer
+
 from utils.pagination import SixPerPagePagination
+from utils.permissions import IsBusinessOwnerOrAdmin
 
 
 class OfferViewSet(viewsets.ModelViewSet):
+    queryset = Offer.objects.all()
     serializer_class = OfferSerializer
-    permission_classes = [IsAuthenticated]
+    filter_backends = [DjangoFilterBackend,
+                       filters.SearchFilter, filters.OrderingFilter]
+    permission_classes = [IsAuthenticated, IsBusinessOwnerOrAdmin]
     pagination_class = SixPerPagePagination
 
+    filterset_fields = {
+        'creator': ['exact'],
+        'offer_details__price': ['gte'],
+        'offer_details__delivery_time_in_days': ['lte'],
+    }
+    search_fields = ['title', 'description']
+    ordering_fields = ['min_price']
+
     def get_queryset(self):
-        user = self.request.user
+        queryset = self.queryset.annotate(
+            min_price=Min('offer_details__price'),
+            min_delivery_time=Min('offer_details__delivery_time_in_days')
+        )
 
-        if user.user_type == 'business':
-            return Offer.objects.filter(creator=user).order_by('-updated_at')
+        creator_id = self.request.query_params.get('creator_id')
+        if creator_id:
+            queryset = queryset.filter(creator_id=creator_id)
 
-        elif user.user_type == 'customer':
-            return Offer.objects.all().order_by('-updated_at')
+        if not self.request.query_params.get('ordering'):
+            queryset = queryset.order_by('-created_at')
 
-        return Offer.objects.none()
+        return queryset
+
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user)
 
 
-
-class OfferDetailViewSet(viewsets.ReadOnlyModelViewSet):
+class OfferDetailViewSet(viewsets.ModelViewSet):
     queryset = OfferDetail.objects.all()
-    serializer_class = OfferDetailSerializer
+    serializer_class = OfferDetailsSerializer

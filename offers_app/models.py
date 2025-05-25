@@ -26,7 +26,7 @@ class OfferDetail(models.Model):
     ]
 
     offer = models.ForeignKey(
-        'Offer', on_delete=models.CASCADE, related_name='details')
+        'Offer', on_delete=models.CASCADE, related_name='offer_details')
     offer_type = models.CharField(
         max_length=30, choices=OFFER_TYPE_CHOICES, default='basic')
     price = models.DecimalField(max_digits=10, decimal_places=2)

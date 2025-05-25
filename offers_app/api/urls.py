@@ -1,13 +1,11 @@
 from django.urls import path, include
-from rest_framework.routers import DefaultRouter
-from .views import OfferViewSet
-from django.conf import settings
-from django.conf.urls.static import static
+from rest_framework import routers
+from offers_app.api.views import OfferViewSet, OfferDetailViewSet
 
-
-router = DefaultRouter()
-router.register(r'', OfferViewSet, basename='offers')
+router = routers.SimpleRouter()
+router.register(r'offers', OfferViewSet)
+router.register(r'offerdetails', OfferDetailViewSet)
 
 urlpatterns = [
     path('', include(router.urls)),
-] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+]

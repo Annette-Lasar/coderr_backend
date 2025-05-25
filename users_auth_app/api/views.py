@@ -1,70 +1,54 @@
-from rest_framework import status
-from rest_framework.response import Response
+from rest_framework import generics
+from users_auth_app.models import UserProfileModel
 from rest_framework.views import APIView
+from rest_framework.permissions import AllowAny, IsAuthenticated, IsAuthenticatedOrReadOnly
 from rest_framework.authtoken.models import Token
-from rest_framework.permissions import AllowAny, IsAuthenticated
-from utils.pagination import SixPerPagePagination
-from django.contrib.auth import authenticate
-from django.contrib.auth import get_user_model
-from .serializers import (WrappedUserSerializer,
-                          UserProfileSerializer,
-                          RegistrationSerializer)
+from rest_framework.response import Response
+from django.contrib.auth.models import User
+from rest_framework import status
+from rest_framework.exceptions import PermissionDenied, NotFound
+
+from .serializers import (UserProfileSerializer,
+                          BusinessUserListSerializer,
+                          CustomerUserListSerializer,
+                          RegistrationSerializer,
+                          LoginSerializer)
 
 
-User = get_user_model()
+class UserProfileDetailView(generics.RetrieveUpdateAPIView):
+    serializer_class = UserProfileSerializer
+    permission_classes = [IsAuthenticatedOrReadOnly]
+
+    def get_object(self):
+
+        user_id = self.kwargs["pk"]
+        try:
+            obj = UserProfileModel.objects.get(user__id=user_id)
+            return obj
+        except UserProfileModel.DoesNotExist:
+            raise NotFound(f"UserProfile with user_id={user_id} not found.")
+
+    def update(self, request, *args, **kwargs):
+        obj = self.get_object()
+        if not request.user.is_staff and obj.user != request.user:
+            raise PermissionDenied("You can only edit your own profile.")
+        return super().update(request, *args, **kwargs)
 
 
-# liefert das eigene Profil des eingeloggten Nutzers (z.B. laura)
-class OwnProfileView(APIView):
+class BusinessUserListView(generics.ListAPIView):
+    serializer_class = BusinessUserListSerializer
     permission_classes = [IsAuthenticated]
 
-    def get(self, request):
-        serializer = UserProfileSerializer(request.user)
-        return Response({"user": serializer.data}) 
-
-    def patch(self, request):
-        serializer = UserProfileSerializer(
-            request.user, data=request.data, partial=True
-        )
-        if serializer.is_valid():
-            serializer.save()
-            return Response({"user": serializer.data})  
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    def get_queryset(self):
+        return UserProfileModel.objects.filter(user_type='business')
 
 
-class UserProfileDetailView(APIView):
-    # oder IsAuthenticated, je nach Sichtbarkeit
-    permission_classes = [AllowAny]
+class CustomerUserListView(generics.ListAPIView):
+    serializer_class = CustomerUserListSerializer
+    permission_classes = [IsAuthenticated]
 
-    def get(self, request, pk):
-        try:
-            user = User.objects.get(pk=pk)
-        except User.DoesNotExist:
-            return Response({'detail': 'Benutzer nicht gefunden.'}, status=404)
-
-        serializer = UserProfileSerializer(user)
-        return Response({"user": serializer.data}) 
-
-class BusinessProfileListView(APIView):
-    def get(self, request):
-        users = User.objects.filter(
-            user_type='business').order_by('-created_at')
-        paginator = SixPerPagePagination()
-        result_page = paginator.paginate_queryset(users, request)
-        wrapped_users = [{"user": u} for u in result_page]
-        serializer = WrappedUserSerializer(wrapped_users, many=True)
-        return Response(serializer.data)
-
-
-class CustomerProfileListView(APIView):
-    def get(self, request):
-        users = User.objects.filter(
-            user_type='customer').order_by('-created_at')
-        paginator = SixPerPagePagination()
-        result_page = paginator.paginate_queryset(users, request)
-        wrapped_users = [{"user": u} for u in result_page]
-        serializer = WrappedUserSerializer(wrapped_users, many=True)
-        return Response(serializer.data)
+    def get_queryset(self):
+        return UserProfileModel.objects.filter(user_type='customer')
 
 
 class RegistrationView(APIView):
@@ -72,14 +56,28 @@ class RegistrationView(APIView):
 
     def post(self, request):
         serializer = RegistrationSerializer(data=request.data)
+
         if serializer.is_valid():
-            user = serializer.save()
+            username = serializer.validated_data['username']
+            email = serializer.validated_data['email']
+            password = serializer.validated_data['password']
+            repeated_password = serializer.validated_data['repeated_password']
+            type = serializer.validated_data.get('type', 'customer')
+
+            if password != repeated_password:
+                return Response({"repeated_password": ["Die Passwörter stimmen nicht überein."]}, status=status.HTTP_400_BAD_REQUEST)
+
+            user = User.objects.create_user(
+                username=username, email=email, password=password)
+            UserProfileModel.objects.create(
+                user=user, email=email, user_type=type, name=username)
             token, created = Token.objects.get_or_create(user=user)
 
             return Response({
                 "token": token.key,
                 "user_id": user.id,
-                "username": user.username
+                "username": user.username,
+                "email": user.email
             }, status=status.HTTP_201_CREATED)
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -89,20 +87,9 @@ class LoginView(APIView):
     permission_classes = [AllowAny]
 
     def post(self, request):
-        username = request.data.get("username")
-        password = request.data.get("password")
+        serializer = LoginSerializer(data=request.data)
 
-        user = authenticate(username=username, password=password)
+        if serializer.is_valid():
+            return Response(serializer.validated_data, status=status.HTTP_200_OK)
 
-        if user is not None:
-            token, created = Token.objects.get_or_create(user=user)
-            return Response({
-                "token": token.key,
-                "user_id": user.id,
-                "username": user.username
-            }, status=status.HTTP_200_OK)
-        else:
-            return Response(
-                {"error": "Ungültiger Benutzername oder Passwort."},
-                status=status.HTTP_401_UNAUTHORIZED
-            )
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)

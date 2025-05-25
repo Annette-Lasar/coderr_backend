@@ -1,21 +1,17 @@
 from django.contrib import admin
-from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
-from .models import User
+from django.contrib.auth.models import User
+from .models import UserProfileModel
 
 
-@admin.register(User)
-class UserAdmin(BaseUserAdmin):
-    fieldsets = BaseUserAdmin.fieldsets + (
-        ('Zusätzliche Infos', {
-            'fields': ('user_type', 'file', 'tel', 'location', 'description', 'availability'),
-        }),
-    )
-    
+@admin.register(UserProfileModel)
+class UserProfileAdmin(admin.ModelAdmin):
     list_display = (
-        'username',
-        'user_type', 
-        'email',
-        'first_name',
-        'last_name',
-        'is_staff',
+        'user',
+        'user_type',
+        'tel',
+        'location',
+        'availability',
+        'created_at',
     )
+    search_fields = ('user__username', 'user__email', 'tel', 'location')
+    list_filter = ('user_type', 'created_at')
