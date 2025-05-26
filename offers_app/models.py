@@ -9,7 +9,7 @@ class Offer(models.Model):
     title = models.CharField(max_length=255)
     description = models.TextField()
     file = models.ImageField(upload_to='offer_pics/', null=True, blank=True)
-    creator = models.ForeignKey(
+    user = models.ForeignKey(
         User, on_delete=models.CASCADE, related_name='offers')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -27,6 +27,7 @@ class OfferDetail(models.Model):
 
     offer = models.ForeignKey(
         'Offer', on_delete=models.CASCADE, related_name='offer_details')
+    title = models.CharField(max_length=255, default="Untitled Detail")
     offer_type = models.CharField(
         max_length=30, choices=OFFER_TYPE_CHOICES, default='basic')
     price = models.DecimalField(max_digits=10, decimal_places=2)

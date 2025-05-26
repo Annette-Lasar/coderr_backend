@@ -15,7 +15,9 @@ class UserProfileSerializer(serializers.ModelSerializer):
     type = serializers.CharField(source='user_type')
     working_hours = serializers.CharField(
         source='availability', required=False)
-    file = serializers.SerializerMethodField()
+
+    file = serializers.FileField(required=False)
+    file_url = serializers.SerializerMethodField()
 
     class Meta:
         model = UserProfileModel
@@ -27,6 +29,7 @@ class UserProfileSerializer(serializers.ModelSerializer):
             'last_name',
             'name',
             'file',
+            'file_url',
             'location',
             'tel',
             'description',
@@ -50,9 +53,13 @@ class UserProfileSerializer(serializers.ModelSerializer):
 
         return super().update(instance, validated_data)
 
-    def get_file(self, obj):
+    def get_file_url(self, obj):
         if obj.file:
-            return f"{settings.MEDIA_URL}{obj.file}"
+            request = self.context.get('request')
+            if request:
+                return request.build_absolute_uri(obj.file.url)
+            else:
+                return f"{settings.MEDIA_URL}{obj.file}"
         return None
 
 
@@ -165,6 +172,3 @@ class CustomerUserListSerializer(serializers.ModelSerializer):
 
     def get_uploaded_at(self, obj):
         return obj.created_at
-
-
-

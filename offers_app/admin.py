@@ -39,7 +39,7 @@ class OfferDetailAdminForm(forms.ModelForm):
         features_text = self.cleaned_data.get('features_text', '')
         features_list = [line.strip()
                          for line in features_text.split('\n') if line.strip()]
-        instance.features = features_list  # ← Hier passiert die Magie
+        instance.features = features_list 
         if commit:
             instance.save()
         return instance
@@ -68,5 +68,5 @@ class OfferDetailInline(admin.StackedInline):
 
 @admin.register(Offer)
 class OfferAdmin(admin.ModelAdmin):
-    list_display = ('title', 'creator', 'created_at')
+    list_display = ('title', 'user', 'created_at')
     inlines = [OfferDetailInline]

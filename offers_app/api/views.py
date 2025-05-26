@@ -19,7 +19,7 @@ class OfferViewSet(viewsets.ModelViewSet):
     pagination_class = SixPerPagePagination
 
     filterset_fields = {
-        'creator': ['exact'],
+        'user': ['exact'],
         'offer_details__price': ['gte'],
         'offer_details__delivery_time_in_days': ['lte'],
     }
@@ -32,9 +32,9 @@ class OfferViewSet(viewsets.ModelViewSet):
             min_delivery_time=Min('offer_details__delivery_time_in_days')
         )
 
-        creator_id = self.request.query_params.get('creator_id')
-        if creator_id:
-            queryset = queryset.filter(creator_id=creator_id)
+        user_id = self.request.query_params.get('user_id')
+        if user_id:
+            queryset = queryset.filter(user_id=user_id)
 
         if not self.request.query_params.get('ordering'):
             queryset = queryset.order_by('-created_at')

@@ -8,7 +8,6 @@ from users_auth_app.models import UserProfileModel
 class UserAuthTests(APITestCase):
 
     def setUp(self):
-        # Erstelle einen Testnutzer (customer)
         self.user = User.objects.create_user(username='testuser', password='testpass')
         self.profile = UserProfileModel.objects.create(
             user=self.user,
@@ -47,7 +46,7 @@ class UserAuthTests(APITestCase):
         data = {'description': 'Updated description'}
         response = self.client.patch(self.profile_url, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        # Reload from DB
+        
         self.profile.refresh_from_db()
         self.assertEqual(self.profile.description, 'Updated description')
 

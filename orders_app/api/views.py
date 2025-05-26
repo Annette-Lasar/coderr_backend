@@ -46,7 +46,7 @@ class OrderViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         """ Ensure only customers can create orders and assign the customer user """
         user_profile = getattr(self.request.user, 'profile', None)
-        if not user_profile or user_profile.type != 'customer':
+        if not user_profile or user_profile.user_type != 'customer':
             raise PermissionDenied("Only customers can create orders.")
         
         serializer.save()
