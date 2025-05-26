@@ -68,9 +68,20 @@ class RegistrationView(APIView):
                 return Response({"repeated_password": ["Die Passwörter stimmen nicht überein."]}, status=status.HTTP_400_BAD_REQUEST)
 
             user = User.objects.create_user(
-                username=username, email=email, password=password)
+                username=username,
+                email=email,
+                password=password,
+                first_name="",
+                last_name="")
             UserProfileModel.objects.create(
-                user=user, email=email, user_type=type, name=username)
+                user=user,
+                email=email,
+                user_type=type,
+                name=username,
+                availability="",
+                location="",
+                tel="",
+                description="")
             token, created = Token.objects.get_or_create(user=user)
 
             return Response({

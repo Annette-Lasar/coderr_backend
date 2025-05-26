@@ -7,7 +7,7 @@ Please clone **my version** of the frontend instead of using the original one.
 I've made a few minor changes:
 - Removed some unintentional trailing HTML tags
 - Error warning "dies ist nur als Kunde möglich" changed to "Dies ist nur als Kunde möglich."
-
+- CSS-Rule for p-Elements added for privacy policy (padding-inline: 1em;)
 
 (You're welcome 😉)
 This ensures that backend integration and layout behave as expected.
@@ -62,3 +62,19 @@ This ensures that backend integration and layout behave as expected.
     python manage.py runserver
 
 
+Important: Demo Accounts Setup
+
+To use the Demo Login buttons (Guest Customer and Guest Business) in the frontend,
+you need to manually create the following user accounts in your database:
+
+Customer Demo Account
+Username: andrey
+Password: asdasd
+
+Business Demo Account
+Username: kevin
+Password: asdasd24
+
+These users can be created either via the Django admin or the registration form — 
+whichever method you prefer. Just ensure they have the correct user_type set 
+(customer or business) and matching credentials.

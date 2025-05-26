@@ -9,13 +9,23 @@ from rest_framework.permissions import AllowAny
 
 
 class BaseInfoView(APIView):
+    """
+    BaseInfoView provides general statistics for the frontend dashboard 
+    (total number of reviews, average rating, number of business profiles 
+    and total number of offers).
+    The view allows public access and is used to display summary info 
+    on the landing page.
+    """
     permission_classes = [AllowAny]
-    
+
     def get(self, request):
         review_count = Review.objects.count()
-        average_rating = Review.objects.aggregate(avg_rating=Avg('rating'))['avg_rating']
-        average_rating = round(average_rating, 1) if average_rating is not None else 0.0
-        business_profile_count = UserProfileModel.objects.filter(user_type='business').count()
+        average_rating = Review.objects.aggregate(
+            avg_rating=Avg('rating'))['avg_rating']
+        average_rating = round(
+            average_rating, 1) if average_rating is not None else 0.0
+        business_profile_count = UserProfileModel.objects.filter(
+            user_type='business').count()
         offer_count = Offer.objects.count()
 
         return Response({
@@ -24,4 +34,3 @@ class BaseInfoView(APIView):
             "business_profile_count": business_profile_count,
             "offer_count": offer_count
         }, status=status.HTTP_200_OK)
-

@@ -9,12 +9,12 @@ from django.conf import settings
 class UserProfileSerializer(serializers.ModelSerializer):
     username = serializers.CharField(source="user.username", read_only=True)
     first_name = serializers.CharField(
-        source="user.first_name", required=False, allow_blank=True)
+        source="user.first_name", required=False, allow_blank=True, default="")
     last_name = serializers.CharField(
-        source="user.last_name", required=False, allow_blank=True)
+        source="user.last_name", required=False, allow_blank=True, default="")
     type = serializers.CharField(source='user_type')
     working_hours = serializers.CharField(
-        source='availability', required=False)
+        source='availability', required=False, default="")
 
     file = serializers.FileField(required=False)
     file_url = serializers.SerializerMethodField()

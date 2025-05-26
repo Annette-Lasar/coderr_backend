@@ -2,10 +2,11 @@ from rest_framework import viewsets, filters
 from rest_framework.permissions import IsAuthenticated
 from django_filters.rest_framework import DjangoFilterBackend
 from django.db.models import Min
+from django.db.models.functions import Greatest
 
 from offers_app.models import Offer, OfferDetail
 from offers_app.api.serializers import OfferSerializer, OfferDetailsSerializer
-
+from django_filters.rest_framework import DjangoFilterBackend, FilterSet, NumberFilter
 from utils.pagination import SixPerPagePagination
 from utils.permissions import IsBusinessOwnerOrAdmin
 
@@ -24,17 +25,27 @@ class OfferViewSet(viewsets.ModelViewSet):
         'offer_details__delivery_time_in_days': ['lte'],
     }
     search_fields = ['title', 'description']
-    ordering_fields = ['min_price']
+    ordering_fields = ['min_price', 'created_at', 'updated_at']
 
     def get_queryset(self):
         queryset = self.queryset.annotate(
             min_price=Min('offer_details__price'),
-            min_delivery_time=Min('offer_details__delivery_time_in_days')
+            min_delivery_time=Min('offer_details__delivery_time_in_days'),
+            latest_date=Greatest('created_at', 'updated_at')
         )
 
-        user_id = self.request.query_params.get('user_id')
-        if user_id:
-            queryset = queryset.filter(user_id=user_id)
+        max_delivery_time = self.request.query_params.get('max_delivery_time')
+        if max_delivery_time:
+            try:
+                max_delivery_time = int(max_delivery_time)
+                queryset = queryset.filter(
+                    min_delivery_time__lte=max_delivery_time)
+            except ValueError:
+                pass
+
+        creator_id = self.request.query_params.get('creator_id')
+        if creator_id:
+            queryset = queryset.filter(user_id=creator_id)
 
         if not self.request.query_params.get('ordering'):
             queryset = queryset.order_by('-created_at')
