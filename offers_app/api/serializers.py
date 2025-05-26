@@ -6,6 +6,10 @@ from django.conf import settings
 
 
 class OfferDetailsSerializer(serializers.ModelSerializer):
+    """
+    Serializer for OfferDetail model. Serializes offer detail fields 
+    for API responses.
+    """
     class Meta:
         model = OfferDetail
         fields = ['id', 'title', 'revisions',
@@ -26,6 +30,12 @@ class OfferDetailsGETSerializer(serializers.ModelSerializer):
 
 
 class OfferSerializer(serializers.ModelSerializer):
+    """
+    Serializer for the Offer model. Includes related user details, 
+    offer details, image handling, and computed fields like minimum 
+    price and delivery time. Handles nested creation and updates of 
+    OfferDetails.
+    """
     user = serializers.PrimaryKeyRelatedField(read_only=True)
     details = serializers.SerializerMethodField()
     user_details = serializers.SerializerMethodField()

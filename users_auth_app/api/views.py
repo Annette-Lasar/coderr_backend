@@ -16,6 +16,11 @@ from .serializers import (UserProfileSerializer,
 
 
 class UserProfileDetailView(generics.RetrieveUpdateAPIView):
+    """
+    API view to retrieve or update a user profile.
+    Ensures users can only edit their own profile unless they are staff.
+    """
+
     serializer_class = UserProfileSerializer
     permission_classes = [IsAuthenticatedOrReadOnly]
 
@@ -36,6 +41,11 @@ class UserProfileDetailView(generics.RetrieveUpdateAPIView):
 
 
 class BusinessUserListView(generics.ListAPIView):
+    """
+    API view to list all business user profiles.
+    Accessible only to authenticated users.
+    """
+
     serializer_class = BusinessUserListSerializer
     permission_classes = [IsAuthenticated]
 
@@ -44,6 +54,11 @@ class BusinessUserListView(generics.ListAPIView):
 
 
 class CustomerUserListView(generics.ListAPIView):
+    """
+    API view to list all customer user profiles.
+    Accessible only to authenticated users.
+    """
+
     serializer_class = CustomerUserListSerializer
     permission_classes = [IsAuthenticated]
 
@@ -52,6 +67,12 @@ class CustomerUserListView(generics.ListAPIView):
 
 
 class RegistrationView(APIView):
+    """
+    API view to handle user registration.
+    Allows any user to create a new account and returns an 
+    authentication token upon success.
+    """
+
     permission_classes = [AllowAny]
 
     def post(self, request):
@@ -95,6 +116,11 @@ class RegistrationView(APIView):
 
 
 class LoginView(APIView):
+    """
+    API view to handle user login.
+    Authenticates the provided credentials and returns a token if valid.
+    """
+
     permission_classes = [AllowAny]
 
     def post(self, request):

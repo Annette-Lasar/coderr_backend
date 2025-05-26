@@ -7,6 +7,13 @@ from utils.permissions import IsCustomerOrAdmin, IsReviewerOrAdmin
 
 
 class ReviewViewSet(viewsets.ModelViewSet):
+    """
+    ViewSet for managing Review objects.
+    Handles creation, listing, updating, and deleting of reviews 
+    with proper permissions. Allows filtering by business_user or 
+    reviewer and supports ordering by rating or date.
+    """
+
     queryset = Review.objects.all()
     serializer_class = ReviewSerializer
     permission_classes = [IsAuthenticated]

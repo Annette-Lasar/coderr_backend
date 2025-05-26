@@ -4,6 +4,13 @@ from django.core.exceptions import ValidationError
 
 
 class Order(models.Model):
+    """
+    Model representing a customer order placed on an offer.
+    Stores details about the customer, the business, selected 
+    offer details, order status, pricing, delivery time, and timestamps.
+    Includes validation to ensure correct user types (customer vs. business).
+    """
+
     STATUS_CHOICES = [
         ('in_progress', 'In Progress'),
         ('completed', 'Completed'),

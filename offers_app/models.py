@@ -6,6 +6,11 @@ User = get_user_model()
 
 
 class Offer(models.Model):
+    """
+    Model representing a freelance offer, including title, description, 
+    optional image file, creator (user), and timestamps for creation 
+    and last update.
+    """
     title = models.CharField(max_length=255)
     description = models.TextField()
     file = models.ImageField(upload_to='offer_pics/', null=True, blank=True)
@@ -19,6 +24,11 @@ class Offer(models.Model):
 
 
 class OfferDetail(models.Model):
+    """
+    Model representing the details of an offer variation (Basic, Standard, 
+    Premium), including title, price, delivery time, features, and 
+    allowed revisions.
+    """
     OFFER_TYPE_CHOICES = [
         ('basic', 'Basic'),
         ('standard', 'Standard'),

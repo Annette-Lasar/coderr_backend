@@ -5,6 +5,12 @@ from ..models import Order
 
 
 class OrderSerializer(serializers.ModelSerializer):
+    """
+    Serializer for the Order model, exposing all fields including 
+    customer, business, offer details, pricing, and delivery information.
+    All fields are read-only to prevent client-side modifications.
+    """
+
     customer_user = serializers.PrimaryKeyRelatedField(read_only=True)
     business_user = serializers.PrimaryKeyRelatedField(read_only=True)
     title = serializers.CharField(read_only=True)
@@ -20,6 +26,13 @@ class OrderSerializer(serializers.ModelSerializer):
 
 
 class CreateOrderSerializer(serializers.Serializer):
+    """
+    Serializer for creating a new Order instance from an existing 
+    OfferDetail. Handles assigning the customer, business, and all 
+    relevant offer details. Includes a custom representation to 
+    return full order data after creation.
+    """
+
     offer_detail_id = serializers.IntegerField()
 
     def create(self, validated_data):
@@ -49,6 +62,9 @@ class CreateOrderSerializer(serializers.Serializer):
     
     
 class UpdateOrderStatusSerializer(serializers.ModelSerializer):
+    """
+    Serializer to update only the status field of an Order instance.
+    """
     class Meta:
         model = Order
         fields = ['status']

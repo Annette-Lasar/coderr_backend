@@ -12,6 +12,13 @@ from utils.permissions import IsBusinessOwnerOrAdmin
 
 
 class OfferViewSet(viewsets.ModelViewSet):
+    """
+    ViewSet for managing Offer objects.
+    Provides list, create, retrieve, update, and delete operations 
+    for offers. Supports filtering by creator, minimum price, and 
+    maximum delivery time; searching by title and description; and 
+    ordering by minimum price, creation date, or update date.
+    """ 
     queryset = Offer.objects.all()
     serializer_class = OfferSerializer
     filter_backends = [DjangoFilterBackend,
@@ -57,5 +64,9 @@ class OfferViewSet(viewsets.ModelViewSet):
 
 
 class OfferDetailViewSet(viewsets.ModelViewSet):
+    """
+    ViewSet for managing OfferDetail objects.
+    Provides full CRUD operations for offer details.
+    """
     queryset = OfferDetail.objects.all()
     serializer_class = OfferDetailsSerializer

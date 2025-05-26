@@ -16,6 +16,13 @@ from rest_framework.exceptions import PermissionDenied
 
 
 class OrderViewSet(viewsets.ModelViewSet):
+    """
+    ViewSet for managing Order instances.
+    Allows customers to create orders and both customers and business 
+    users to view or update their associated orders. 
+    Applies different serializers depending on the action.
+    """
+
     queryset = Order.objects.all()
     permission_classes = [IsAuthenticated]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
@@ -54,6 +61,11 @@ class OrderViewSet(viewsets.ModelViewSet):
 
 
 class OrderCountView(APIView):
+    """
+    API view that returns the count of in-progress orders for a 
+    given business user. Accepts a business_user_id as a URL parameter 
+    and returns the count in the response.
+    """
     def get(self, request, business_user_id): 
         business_user = get_object_or_404(User, id=business_user_id)
         order_count = Order.objects.filter(business_user=business_user, status='in_progress').count()
@@ -61,6 +73,12 @@ class OrderCountView(APIView):
     
 
 class CompletedOrderCountView(APIView):
+    """
+    API view that returns the count of completed orders for a given 
+    business user. Takes business_user_id as a URL parameter and 
+    responds with the count.
+    """
+
     def get(self, request, business_user_id):
         business_user = get_object_or_404(User, id=business_user_id)
         completed_order_count = Order.objects.filter(business_user=business_user, status='completed').count()

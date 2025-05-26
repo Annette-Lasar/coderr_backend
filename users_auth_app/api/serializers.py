@@ -7,6 +7,11 @@ from django.conf import settings
 
 
 class UserProfileSerializer(serializers.ModelSerializer):
+    """
+    Serializer for user profiles, combining user and profile fields.
+    Includes file upload handling and provides the full file URL.
+    """
+
     username = serializers.CharField(source="user.username", read_only=True)
     first_name = serializers.CharField(
         source="user.first_name", required=False, allow_blank=True, default="")
@@ -64,6 +69,11 @@ class UserProfileSerializer(serializers.ModelSerializer):
 
 
 class RegistrationSerializer(serializers.Serializer):
+    """
+    Serializer for user registration.
+    Handles validation of username, email, and password confirmation.
+    """
+
     username = serializers.CharField(max_length=150, required=True)
     email = serializers.EmailField(required=True)
     password = serializers.CharField(
@@ -93,6 +103,12 @@ class RegistrationSerializer(serializers.Serializer):
 
 
 class LoginSerializer(serializers.Serializer):
+    """
+    Serializer for user login.
+    Validates credentials, authenticates the user, and returns 
+    an authentication token.
+    """
+
     username = serializers.CharField(required=True)
     password = serializers.CharField(write_only=True, required=True)
 
@@ -121,6 +137,11 @@ class LoginSerializer(serializers.Serializer):
 
 
 class BusinessUserListSerializer(serializers.ModelSerializer):
+    """
+    Serializer for listing business users.
+    Includes selected profile and user details, along with profile image and availability.
+    """
+
     user = serializers.SerializerMethodField()
     file = serializers.SerializerMethodField()
     working_hours = serializers.CharField(
@@ -147,6 +168,11 @@ class BusinessUserListSerializer(serializers.ModelSerializer):
 
 
 class CustomerUserListSerializer(serializers.ModelSerializer):
+    """
+    Serializer for listing customer users.
+    Includes selected profile and user details, profile image, registration date, and user type.
+    """
+
     user = serializers.SerializerMethodField()
     file = serializers.SerializerMethodField()
     uploaded_at = serializers.SerializerMethodField()
