@@ -54,6 +54,10 @@ class UserProfileSerializer(serializers.ModelSerializer):
             user.first_name = user_data["first_name"]
         if "last_name" in user_data:
             user.last_name = user_data["last_name"]
+        if "email" in validated_data:
+            email = validated_data.pop("email")
+            user.email = email
+            instance.email = email
         user.save()
 
         return super().update(instance, validated_data)

@@ -4,6 +4,7 @@ from .serializers import ReviewSerializer
 from rest_framework.permissions import IsAuthenticated
 from django_filters.rest_framework import DjangoFilterBackend
 from utils.permissions import IsCustomerOrAdmin, IsReviewerOrAdmin
+from rest_framework.exceptions import ValidationError
 
 
 class ReviewViewSet(viewsets.ModelViewSet):
@@ -39,8 +40,15 @@ class ReviewViewSet(viewsets.ModelViewSet):
         return super().partial_update(request, *args, **kwargs)
 
     def perform_create(self, serializer):
-        """Automatically assign the logged-in user as the reviewer."""
-        serializer.save(reviewer=self.request.user)
+        """Automatically assign the logged-in user as the reviewer, but ensure only one review per business user."""
+        reviewer = self.request.user
+        business_user = serializer.validated_data.get('business_user')
+
+        if Review.objects.filter(reviewer=reviewer, business_user=business_user).exists():
+            raise ValidationError("Du hast bereits eine Bewertung für diesen Anbieter abgegeben.")
+
+        serializer.save(reviewer=reviewer)
+
 
     def get_queryset(self):
         queryset = super().get_queryset()

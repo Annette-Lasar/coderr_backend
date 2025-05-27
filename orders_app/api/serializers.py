@@ -1,4 +1,5 @@
 from rest_framework import serializers
+from django.shortcuts import get_object_or_404
 from offers_app.models import OfferDetail
 from ..models import Order
 
@@ -36,7 +37,7 @@ class CreateOrderSerializer(serializers.Serializer):
     offer_detail_id = serializers.IntegerField()
 
     def create(self, validated_data):
-        offer_detail = OfferDetail.objects.get(id=validated_data['offer_detail_id'])
+        offer_detail = get_object_or_404(OfferDetail, id=validated_data['offer_detail_id'])
         offer = offer_detail.offer
 
         customer_user = self.context['request'].user

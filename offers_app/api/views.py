@@ -3,7 +3,7 @@ from rest_framework.permissions import IsAuthenticated
 from django_filters.rest_framework import DjangoFilterBackend
 from django.db.models import Min
 from django.db.models.functions import Greatest
-
+from rest_framework.permissions import AllowAny
 from offers_app.models import Offer, OfferDetail
 from offers_app.api.serializers import OfferSerializer, OfferDetailsSerializer
 from django_filters.rest_framework import DjangoFilterBackend, FilterSet, NumberFilter
@@ -18,12 +18,12 @@ class OfferViewSet(viewsets.ModelViewSet):
     for offers. Supports filtering by creator, minimum price, and 
     maximum delivery time; searching by title and description; and 
     ordering by minimum price, creation date, or update date.
-    """ 
+    """
     queryset = Offer.objects.all()
     serializer_class = OfferSerializer
     filter_backends = [DjangoFilterBackend,
                        filters.SearchFilter, filters.OrderingFilter]
-    permission_classes = [IsAuthenticated, IsBusinessOwnerOrAdmin]
+    permission_classes = [IsBusinessOwnerOrAdmin]
     pagination_class = SixPerPagePagination
 
     filterset_fields = {

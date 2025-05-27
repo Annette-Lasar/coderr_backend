@@ -1,7 +1,7 @@
 from rest_framework import generics
 from users_auth_app.models import UserProfileModel
 from rest_framework.views import APIView
-from rest_framework.permissions import AllowAny, IsAuthenticated, IsAuthenticatedOrReadOnly
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.authtoken.models import Token
 from rest_framework.response import Response
 from django.contrib.auth.models import User
@@ -22,7 +22,7 @@ class UserProfileDetailView(generics.RetrieveUpdateAPIView):
     """
 
     serializer_class = UserProfileSerializer
-    permission_classes = [IsAuthenticatedOrReadOnly]
+    permission_classes = [IsAuthenticated]
 
     def get_object(self):
 
@@ -82,27 +82,19 @@ class RegistrationView(APIView):
             username = serializer.validated_data['username']
             email = serializer.validated_data['email']
             password = serializer.validated_data['password']
-            repeated_password = serializer.validated_data['repeated_password']
             type = serializer.validated_data.get('type', 'customer')
-
-            if password != repeated_password:
-                return Response({"repeated_password": ["Die Passwörter stimmen nicht überein."]}, status=status.HTTP_400_BAD_REQUEST)
 
             user = User.objects.create_user(
                 username=username,
                 email=email,
                 password=password,
-                first_name="",
-                last_name="")
+            )
             UserProfileModel.objects.create(
                 user=user,
                 email=email,
                 user_type=type,
                 name=username,
-                availability="",
-                location="",
-                tel="",
-                description="")
+            )
             token, created = Token.objects.get_or_create(user=user)
 
             return Response({

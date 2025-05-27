@@ -42,9 +42,9 @@ class OfferSerializer(serializers.ModelSerializer):
     min_price = serializers.FloatField(read_only=True)
     min_delivery_time = serializers.IntegerField(read_only=True)
 
-    file = serializers.FileField(required=False)  
+    file = serializers.FileField(required=False)
     image = serializers.FileField(source='file', required=False)
-    image_url = serializers.SerializerMethodField()  
+    image_url = serializers.SerializerMethodField()
 
     class Meta:
         model = Offer
@@ -68,6 +68,11 @@ class OfferSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         """Custom create method to handle nested offer details."""
         details_data = self.initial_data.get('details', [])
+
+        if len(details_data) != 3:
+            raise serializers.ValidationError(
+                "Es müssen genau drei Details übergeben werden.")
+
         user = self.context["request"].user
         validated_data["user"] = user
         offer = Offer.objects.create(**validated_data)
@@ -78,7 +83,8 @@ class OfferSerializer(serializers.ModelSerializer):
 
     def update(self, instance, validated_data):
         """Custom update method to allow partial updates and handle nested OfferDetails."""
-        details_data = validated_data.pop('offer_detail', None)
+        details_data = self.initial_data.get('details', None)
+
         for attr, value in validated_data.items():
             setattr(instance, attr, value)
         instance.save()
@@ -93,7 +99,8 @@ class OfferSerializer(serializers.ModelSerializer):
                 if offer_type in existing_details:
                     detail_instance = existing_details[offer_type]
                     for attr, value in detail_data.items():
-                        setattr(detail_instance, attr, value)
+                        if attr != 'offer_type':
+                            setattr(detail_instance, attr, value)
                     detail_instance.save()
                 else:
                     OfferDetail.objects.create(offer=instance, **detail_data)
@@ -117,13 +124,14 @@ class OfferSerializer(serializers.ModelSerializer):
         }
 
     def get_min_price(self, obj):
-        min_price = obj.offer_details.aggregate(min_price=Min('price'))['min_price']
+        min_price = obj.offer_details.aggregate(
+            min_price=Min('price'))['min_price']
         return float(min_price) if min_price is not None else 0.00
 
     def get_min_delivery_time(self, obj):
-        min_time = obj.offer_details.aggregate(min_time=Min('delivery_time_in_days'))['min_time']
+        min_time = obj.offer_details.aggregate(
+            min_time=Min('delivery_time_in_days'))['min_time']
         return min_time if min_time is not None else 0
-
 
     def get_image_url(self, obj):
         """Ensure image URL includes MEDIA_URL"""
