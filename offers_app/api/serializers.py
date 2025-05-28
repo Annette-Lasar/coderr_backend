@@ -10,6 +10,8 @@ class OfferDetailsSerializer(serializers.ModelSerializer):
     Serializer for OfferDetail model. Serializes offer detail fields 
     for API responses.
     """
+    price = serializers.FloatField()
+
     class Meta:
         model = OfferDetail
         fields = ['id', 'title', 'revisions',
@@ -43,7 +45,8 @@ class OfferSerializer(serializers.ModelSerializer):
     min_delivery_time = serializers.IntegerField(read_only=True)
 
     file = serializers.FileField(required=False)
-    image = serializers.FileField(source='file', required=False)
+    image = serializers.FileField(
+        source='file', required=False, allow_null=True)
     image_url = serializers.SerializerMethodField()
 
     class Meta:

@@ -74,3 +74,15 @@ class IsAdminOnly(permissions.BasePermission):
 
     def has_permission(self, request, view):
         return request.user.is_authenticated and request.user.is_staff
+
+
+class IsBusinessOrAdmin(permissions.BasePermission):
+    def has_permission(self, request, view):
+        user = request.user
+        user_profile = getattr(user, 'profile', None)
+
+        return (
+            user.is_authenticated and
+            (user.is_staff or user_profile.user_type == 'business'
+             )
+        )

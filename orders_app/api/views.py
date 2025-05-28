@@ -12,7 +12,7 @@ from orders_app.api.serializers import (
 from rest_framework.permissions import IsAuthenticated
 from utils.permissions import IsCustomerOrAdmin, IsAdminOnly
 from rest_framework.exceptions import PermissionDenied, NotAuthenticated
-from utils.permissions import IsBusinessOwnerOrAdmin
+from utils.permissions import IsBusinessOwnerOrAdmin, IsBusinessOrAdmin
 
 
 class OrderViewSet(viewsets.ModelViewSet):
@@ -78,6 +78,7 @@ class OrderCountView(APIView):
     given business user. Accepts a business_user_id as a URL parameter 
     and returns the count in the response.
     """
+    permission_classes = [IsAuthenticated]
 
     def get(self, request, business_user_id):
         business_user = get_object_or_404(User, id=business_user_id)
@@ -92,6 +93,7 @@ class CompletedOrderCountView(APIView):
     business user. Takes business_user_id as a URL parameter and 
     responds with the count.
     """
+    permission_classes = [IsBusinessOrAdmin]
 
     def get(self, request, business_user_id):
         business_user = get_object_or_404(User, id=business_user_id)
