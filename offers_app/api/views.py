@@ -1,12 +1,17 @@
-from rest_framework import viewsets, filters
+from rest_framework import viewsets, filters, status
+from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from django_filters.rest_framework import DjangoFilterBackend
 from django.db.models import Min
 from django.db.models.functions import Greatest
 from rest_framework.permissions import AllowAny
 from offers_app.models import Offer, OfferDetail
-from offers_app.api.serializers import OfferSerializer, OfferDetailsSerializer
-from django_filters.rest_framework import DjangoFilterBackend, FilterSet, NumberFilter
+from offers_app.api.serializers import (
+    OfferSerializer,
+    OfferDetailsSerializer,
+    OfferCreateSerializer
+)
+from django_filters.rest_framework import DjangoFilterBackend
 from utils.pagination import SixPerPagePagination
 from utils.permissions import IsBusinessOwnerOrAdmin
 
@@ -14,13 +19,9 @@ from utils.permissions import IsBusinessOwnerOrAdmin
 class OfferViewSet(viewsets.ModelViewSet):
     """
     ViewSet for managing Offer objects.
-    Provides list, create, retrieve, update, and delete operations 
-    for offers. Supports filtering by creator, minimum price, and 
-    maximum delivery time; searching by title and description; and 
-    ordering by minimum price, creation date, or update date.
+    Provides list, create, retrieve, update, and delete operations.
     """
     queryset = Offer.objects.all()
-    serializer_class = OfferSerializer
     filter_backends = [DjangoFilterBackend,
                        filters.SearchFilter, filters.OrderingFilter]
     permission_classes = [IsBusinessOwnerOrAdmin]
@@ -41,6 +42,14 @@ class OfferViewSet(viewsets.ModelViewSet):
             latest_date=Greatest('created_at', 'updated_at')
         )
 
+        min_price = self.request.query_params.get('min_price')
+        if min_price:
+            try:
+                min_price = float(min_price)
+                queryset = queryset.filter(min_price__gte=min_price)
+            except ValueError:
+                pass
+
         max_delivery_time = self.request.query_params.get('max_delivery_time')
         if max_delivery_time:
             try:
@@ -59,8 +68,24 @@ class OfferViewSet(viewsets.ModelViewSet):
 
         return queryset
 
+    def get_serializer_class(self):
+        if self.action == 'create':
+            return OfferCreateSerializer
+        return OfferSerializer
+
     def perform_create(self, serializer):
-        serializer.save(user=self.request.user)
+        offer = serializer.save(user=self.request.user)
+
+        offer = Offer.objects.prefetch_related(
+            'offer_details').get(pk=offer.pk)
+        self._prefetched_object = offer
+
+    def partial_update(self, request, *args, **kwargs):
+        super().partial_update(request, *args, **kwargs)
+        serializer = OfferCreateSerializer(
+            self.get_object(), context={'request': request}
+        )
+        return Response(serializer.data)
 
 
 class OfferDetailViewSet(viewsets.ModelViewSet):
@@ -70,3 +95,4 @@ class OfferDetailViewSet(viewsets.ModelViewSet):
     """
     queryset = OfferDetail.objects.all()
     serializer_class = OfferDetailsSerializer
+    permission_classes = [IsAuthenticated]

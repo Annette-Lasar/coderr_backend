@@ -1,10 +1,11 @@
-from rest_framework import viewsets, filters, permissions
+from rest_framework import viewsets, filters, permissions, status
 from ..models import Review
 from .serializers import ReviewSerializer
 from rest_framework.permissions import IsAuthenticated
 from django_filters.rest_framework import DjangoFilterBackend
 from utils.permissions import IsCustomerOrAdmin, IsReviewerOrAdmin
 from rest_framework.exceptions import ValidationError
+from rest_framework.response import Response
 
 
 class ReviewViewSet(viewsets.ModelViewSet):
@@ -35,8 +36,15 @@ class ReviewViewSet(viewsets.ModelViewSet):
         """Restrict editable fields to only 'rating' and 'description'."""
         allowed_fields = {'rating', 'description'}
         mutable_data = request.data.copy()
-        request._full_data = {
+        filtered_data = {
             key: value for key, value in mutable_data.items() if key in allowed_fields}
+
+        if 'rating' not in filtered_data or 'description' not in filtered_data:
+            return Response(
+                {"detail": "Both 'rating' and 'description' fields are required."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        request._full_data = filtered_data
         return super().partial_update(request, *args, **kwargs)
 
     def perform_create(self, serializer):
@@ -45,10 +53,10 @@ class ReviewViewSet(viewsets.ModelViewSet):
         business_user = serializer.validated_data.get('business_user')
 
         if Review.objects.filter(reviewer=reviewer, business_user=business_user).exists():
-            raise ValidationError("Du hast bereits eine Bewertung für diesen Anbieter abgegeben.")
+            raise ValidationError(
+                "Du hast bereits eine Bewertung für diesen Anbieter abgegeben.")
 
         serializer.save(reviewer=reviewer)
-
 
     def get_queryset(self):
         queryset = super().get_queryset()

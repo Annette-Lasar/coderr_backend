@@ -11,30 +11,26 @@ class UserProfileSerializer(serializers.ModelSerializer):
     Serializer for user profiles, combining user and profile fields.
     Includes file upload handling and provides the full file URL.
     """
-
+    user = serializers.PrimaryKeyRelatedField(read_only=True)
     username = serializers.CharField(source="user.username", read_only=True)
     first_name = serializers.CharField(
-        source="user.first_name", required=False, allow_blank=True, default="")
+        source="user.first_name", required=False, read_only=True)
     last_name = serializers.CharField(
-        source="user.last_name", required=False, allow_blank=True, default="")
+        source="user.last_name", required=False, read_only=True)
     type = serializers.CharField(source='user_type')
     working_hours = serializers.CharField(
         source='availability', required=False, default="")
 
-    file = serializers.FileField(required=False)
-    file_url = serializers.SerializerMethodField()
+    file = serializers.SerializerMethodField()
 
     class Meta:
         model = UserProfileModel
         fields = [
-            'id',
             'user',
             'username',
             'first_name',
             'last_name',
-            'name',
             'file',
-            'file_url',
             'location',
             'tel',
             'description',
@@ -62,13 +58,9 @@ class UserProfileSerializer(serializers.ModelSerializer):
 
         return super().update(instance, validated_data)
 
-    def get_file_url(self, obj):
+    def get_file(self, obj):
         if obj.file:
-            request = self.context.get('request')
-            if request:
-                return request.build_absolute_uri(obj.file.url)
-            else:
-                return f"{settings.MEDIA_URL}{obj.file}"
+            return obj.file.name.split('/')[-1]
         return None
 
 
@@ -134,9 +126,9 @@ class LoginSerializer(serializers.Serializer):
 
         return {
             "token": token.key,
-            "user_id": user.id,
             "username": user.username,
-            "email": user.email
+            "email": user.email,
+            "user_id": user.id,
         }
 
 
@@ -145,8 +137,11 @@ class BusinessUserListSerializer(serializers.ModelSerializer):
     Serializer for listing business users.
     Includes selected profile and user details, along with profile image and availability.
     """
-
-    user = serializers.SerializerMethodField()
+    user = serializers.PrimaryKeyRelatedField(read_only=True)
+    username = serializers.CharField(source='user.username', read_only=True)
+    first_name = serializers.CharField(
+        source='user.first_name', read_only=True)
+    last_name = serializers.CharField(source='user.last_name', read_only=True)
     file = serializers.SerializerMethodField()
     working_hours = serializers.CharField(
         source='availability', required=False)
@@ -154,20 +149,12 @@ class BusinessUserListSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = UserProfileModel
-        fields = ['user', 'file', 'location', 'tel',
-                  'description', 'working_hours', 'type']
-
-    def get_user(self, obj):
-        return {
-            "pk": obj.user.pk,
-            "username": obj.user.username,
-            "first_name": obj.user.first_name,
-            "last_name": obj.user.last_name
-        }
+        fields = ['user', 'username', 'first_name', 'last_name', 'file',
+                  'location', 'tel', 'description', 'working_hours', 'type']
 
     def get_file(self, obj):
         if obj.file:
-            return f"{settings.MEDIA_URL}{obj.file}"
+            return obj.file.name.split('/')[-1]
         return None
 
 
@@ -177,27 +164,30 @@ class CustomerUserListSerializer(serializers.ModelSerializer):
     Includes selected profile and user details, profile image, registration date, and user type.
     """
 
-    user = serializers.SerializerMethodField()
+    user = serializers.PrimaryKeyRelatedField(read_only=True)
+    username = serializers.CharField(source='user.username', read_only=True)
+    first_name = serializers.CharField(
+        source='user.first_name', read_only=True)
+    last_name = serializers.CharField(source='user.last_name', read_only=True)
     file = serializers.SerializerMethodField()
     uploaded_at = serializers.SerializerMethodField()
     type = serializers.CharField(source='user_type')
 
     class Meta:
         model = UserProfileModel
-        fields = ['user', 'file', 'location', 'tel',
-                  'description', 'uploaded_at', 'type']
-
-    def get_user(self, obj):
-        return {
-            "pk": obj.user.pk,
-            "username": obj.user.username,
-            "first_name": obj.user.first_name,
-            "last_name": obj.user.last_name
-        }
+        fields = [
+            'user',
+            'username',
+            'first_name',
+            'last_name',
+            'file',
+            'uploaded_at',
+            'type'
+        ]
 
     def get_file(self, obj):
         if obj.file:
-            return f"{settings.MEDIA_URL}{obj.file}"
+            return obj.file.name.split('/')[-1]
         return None
 
     def get_uploaded_at(self, obj):

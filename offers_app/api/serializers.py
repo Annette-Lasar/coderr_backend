@@ -1,8 +1,7 @@
 from rest_framework import serializers
 from offers_app.models import Offer, OfferDetail
 from django.db.models import Min
-from django.urls import reverse
-from django.conf import settings
+from rest_framework.reverse import reverse as drf_reverse
 
 
 class OfferDetailsSerializer(serializers.ModelSerializer):
@@ -18,8 +17,7 @@ class OfferDetailsSerializer(serializers.ModelSerializer):
                   'delivery_time_in_days', 'price', 'features', 'offer_type']
 
 
-class OfferDetailsGETSerializer(serializers.ModelSerializer):
-    """Serializer for GET requests: returns only ID and URL."""
+class OfferDetailsListSerializer(serializers.ModelSerializer):
     url = serializers.SerializerMethodField()
 
     class Meta:
@@ -27,8 +25,19 @@ class OfferDetailsGETSerializer(serializers.ModelSerializer):
         fields = ['id', 'url']
 
     def get_url(self, obj):
-        url = reverse('offerdetails-detail', args=[obj.id])
-        return url.replace('/api', '')
+        return f"/offerdetails/{obj.id}/"
+
+
+class OfferDetailsRetrieveSerializer(serializers.ModelSerializer):
+    url = serializers.SerializerMethodField()
+
+    class Meta:
+        model = OfferDetail
+        fields = ['id', 'url']
+
+    def get_url(self, obj):
+        request = self.context.get('request')
+        return drf_reverse('offerdetails-detail', args=[obj.id], request=request)
 
 
 class OfferSerializer(serializers.ModelSerializer):
@@ -43,51 +52,68 @@ class OfferSerializer(serializers.ModelSerializer):
     user_details = serializers.SerializerMethodField()
     min_price = serializers.FloatField(read_only=True)
     min_delivery_time = serializers.IntegerField(read_only=True)
-
-    file = serializers.FileField(required=False)
-    image = serializers.FileField(
-        source='file', required=False, allow_null=True)
-    image_url = serializers.SerializerMethodField()
+    image = serializers.SerializerMethodField()
 
     class Meta:
         model = Offer
         fields = [
             'id',
             'user',
-            'user_details',
             'title',
-            'description',
-            'details',
-            'file',
             'image',
-            'image_url',
+            'description',
             'created_at',
             'updated_at',
+            'details',
             'min_price',
-            'min_delivery_time'
+            'min_delivery_time',
+            'user_details',
         ]
         extra_kwargs = {'user': {'read_only': True}}
 
     def create(self, validated_data):
-        """Custom create method to handle nested offer details."""
         details_data = self.initial_data.get('details', [])
-
-        if len(details_data) != 3:
-            raise serializers.ValidationError(
-                "Es müssen genau drei Details übergeben werden.")
-
         user = self.context["request"].user
         validated_data["user"] = user
         offer = Offer.objects.create(**validated_data)
 
         for detail_data in details_data:
             OfferDetail.objects.create(offer=offer, **detail_data)
-        return offer
+
+        return Offer.objects.prefetch_related('offer_details').get(pk=offer.pk)
+
+    # def update(self, instance, validated_data):
+    #     """Custom update method to allow partial updates and handle nested OfferDetails."""
+    #     details_data = self.initial_data.get('details', None)
+
+    #     for attr, value in validated_data.items():
+    #         setattr(instance, attr, value)
+    #     instance.save()
+
+    #     if details_data is not None:
+    #         existing_details = {
+    #             detail.offer_type: detail for detail in instance.offer_details.all()
+    #         }
+
+    #         for detail_data in details_data:
+    #             offer_type = detail_data.get("offer_type")
+    #             if offer_type in existing_details:
+    #                 detail_instance = existing_details[offer_type]
+    #                 for attr, value in detail_data.items():
+    #                     if attr != 'offer_type':
+    #                         setattr(detail_instance, attr, value)
+    #                 detail_instance.save()
+    #             else:
+    #                 OfferDetail.objects.create(offer=instance, **detail_data)
+
+    #     updated_offer = Offer.objects.prefetch_related(
+    #         'offer_details').get(pk=instance.pk)
+    #     return updated_offer
 
     def update(self, instance, validated_data):
-        """Custom update method to allow partial updates and handle nested OfferDetails."""
         details_data = self.initial_data.get('details', None)
 
+        # Aktualisiere Felder am Offer selbst
         for attr, value in validated_data.items():
             setattr(instance, attr, value)
         instance.save()
@@ -99,6 +125,12 @@ class OfferSerializer(serializers.ModelSerializer):
 
             for detail_data in details_data:
                 offer_type = detail_data.get("offer_type")
+
+                if not offer_type:
+                    raise serializers.ValidationError(
+                        "Each detail must include an 'offer_type' field to be properly matched."
+                    )
+
                 if offer_type in existing_details:
                     detail_instance = existing_details[offer_type]
                     for attr, value in detail_data.items():
@@ -110,14 +142,28 @@ class OfferSerializer(serializers.ModelSerializer):
 
         return instance
 
-    def get_details(self, obj):
-        """Return different detail structures for list vs single offer requests."""
-        request = self.context.get("request")
+    def to_representation(self, instance):
+        representation = super().to_representation(instance)
+        request = self.context.get('request')
+        is_detail = request and 'pk' in request.parser_context.get(
+            'kwargs', {})
 
-        if request and (request.parser_context.get("kwargs", {}).get("pk") or request.method == "POST"):
+        if is_detail:
+            representation.pop('user_details', None)
+
+        return representation
+
+    def get_details(self, obj):
+        request = self.context.get("request")
+        view = self.context.get("view")
+
+        if request and request.method == "POST":
             return OfferDetailsSerializer(obj.offer_details.all(), many=True).data
 
-        return OfferDetailsGETSerializer(obj.offer_details.all(), many=True).data
+        if view and view.action == 'retrieve':
+            return OfferDetailsRetrieveSerializer(obj.offer_details.all(), many=True, context=self.context).data
+
+        return OfferDetailsListSerializer(obj.offer_details.all(), many=True, context=self.context).data
 
     def get_user_details(self, obj):
         return {
@@ -136,12 +182,30 @@ class OfferSerializer(serializers.ModelSerializer):
             min_time=Min('delivery_time_in_days'))['min_time']
         return min_time if min_time is not None else 0
 
-    def get_image_url(self, obj):
-        """Ensure image URL includes MEDIA_URL"""
+    def get_image(self, obj):
         if obj.file:
-            request = self.context.get('request')
-            if request:
-                return request.build_absolute_uri(obj.file.url)
-            else:
-                return f"{settings.MEDIA_URL}{obj.file}"
+            return obj.file.name.split('/')[-1]
+        return None
+
+
+class OfferCreateSerializer(serializers.ModelSerializer):
+
+    details = OfferDetailsSerializer(
+        source='offer_details', many=True, read_only=True)
+
+    image = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Offer
+        fields = [
+            'id',
+            'title',
+            'image',
+            'description',
+            'details',
+        ]
+
+    def get_image(self, obj):
+        if obj.file:
+            return obj.file.name.split('/')[-1]
         return None

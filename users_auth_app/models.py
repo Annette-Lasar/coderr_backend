@@ -19,14 +19,14 @@ class UserProfileModel(models.Model):
     name = models.CharField(max_length=255, default="default")
     file = models.FileField(
         upload_to='profile_pics/', null=True, blank=True)
-    location = models.CharField(max_length=255, null=True, blank=True)
-    tel = models.CharField(max_length=20, null=True, blank=True)
-    description = models.TextField(null=True, blank=True)
-    availability = models.CharField(max_length=50, null=True, blank=True)
+    location = models.CharField(max_length=255, blank=True, default="")
+    tel = models.CharField(max_length=20, blank=True, default="")
+    description = models.TextField(blank=True, default="")
+    availability = models.CharField(max_length=50, blank=True, default="")
     user_type = models.CharField(
         max_length=10, choices=USER_TYPES, default='customer')
 
-    email = models.EmailField(unique=True, null=True, blank=True)
+    email = models.EmailField(unique=True, blank=True, default="")
     created_at = models.DateTimeField(default=timezone.now)
 
     def __str__(self):

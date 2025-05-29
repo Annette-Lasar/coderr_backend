@@ -71,6 +71,19 @@ class OrderViewSet(viewsets.ModelViewSet):
 
         serializer.save()
 
+    def partial_update(self, request, *args, **kwargs):
+        if 'status' not in request.data:
+            return Response(
+                {"detail": "Das Feld 'status' ist erforderlich."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        super().partial_update(request, *args, **kwargs)
+        instance = self.get_object()
+        serializer = OrderSerializer(
+            instance, context=self.get_serializer_context())
+        return Response(serializer.data)
+
 
 class OrderCountView(APIView):
     """
