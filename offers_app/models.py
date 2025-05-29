@@ -13,7 +13,7 @@ class Offer(models.Model):
     """
     title = models.CharField(max_length=255)
     description = models.TextField()
-    file = models.ImageField(upload_to='offer_pics/', null=True, blank=True)
+    image = models.ImageField(upload_to='offer_pics/', null=True, blank=True)
     user = models.ForeignKey(
         User, on_delete=models.CASCADE, related_name='offers')
     created_at = models.DateTimeField(auto_now_add=True)

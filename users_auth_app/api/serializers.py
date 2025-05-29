@@ -14,9 +14,9 @@ class UserProfileSerializer(serializers.ModelSerializer):
     user = serializers.PrimaryKeyRelatedField(read_only=True)
     username = serializers.CharField(source="user.username", read_only=True)
     first_name = serializers.CharField(
-        source="user.first_name", required=False, read_only=True)
+        source="user.first_name", required=False)
     last_name = serializers.CharField(
-        source="user.last_name", required=False, read_only=True)
+        source="user.last_name", required=False)
     type = serializers.CharField(source='user_type')
     working_hours = serializers.CharField(
         source='availability', required=False, default="")

@@ -82,38 +82,9 @@ class OfferSerializer(serializers.ModelSerializer):
 
         return Offer.objects.prefetch_related('offer_details').get(pk=offer.pk)
 
-    # def update(self, instance, validated_data):
-    #     """Custom update method to allow partial updates and handle nested OfferDetails."""
-    #     details_data = self.initial_data.get('details', None)
-
-    #     for attr, value in validated_data.items():
-    #         setattr(instance, attr, value)
-    #     instance.save()
-
-    #     if details_data is not None:
-    #         existing_details = {
-    #             detail.offer_type: detail for detail in instance.offer_details.all()
-    #         }
-
-    #         for detail_data in details_data:
-    #             offer_type = detail_data.get("offer_type")
-    #             if offer_type in existing_details:
-    #                 detail_instance = existing_details[offer_type]
-    #                 for attr, value in detail_data.items():
-    #                     if attr != 'offer_type':
-    #                         setattr(detail_instance, attr, value)
-    #                 detail_instance.save()
-    #             else:
-    #                 OfferDetail.objects.create(offer=instance, **detail_data)
-
-    #     updated_offer = Offer.objects.prefetch_related(
-    #         'offer_details').get(pk=instance.pk)
-    #     return updated_offer
-
     def update(self, instance, validated_data):
         details_data = self.initial_data.get('details', None)
 
-        # Aktualisiere Felder am Offer selbst
         for attr, value in validated_data.items():
             setattr(instance, attr, value)
         instance.save()
@@ -183,17 +154,22 @@ class OfferSerializer(serializers.ModelSerializer):
         return min_time if min_time is not None else 0
 
     def get_image(self, obj):
-        if obj.file:
-            return obj.file.name.split('/')[-1]
+        if obj.image:
+            return obj.image.name.split('/')[-1]
         return None
 
 
+class OfferDetailInputSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = OfferDetail
+        fields = ['title', 'revisions', 'delivery_time_in_days',
+                  'price', 'features', 'offer_type']
+
+
+
 class OfferCreateSerializer(serializers.ModelSerializer):
-
-    details = OfferDetailsSerializer(
-        source='offer_details', many=True, read_only=True)
-
-    image = serializers.SerializerMethodField()
+    details = OfferDetailInputSerializer(many=True, write_only=True)
+    image = serializers.ImageField(allow_null=True, required=False)
 
     class Meta:
         model = Offer
@@ -205,7 +181,25 @@ class OfferCreateSerializer(serializers.ModelSerializer):
             'details',
         ]
 
-    def get_image(self, obj):
-        if obj.file:
-            return obj.file.name.split('/')[-1]
-        return None
+    def validate_details(self, value):
+        if len(value) != 3:
+            raise serializers.ValidationError(
+                "All three offer details (Basic, Standard, Premium) are required.")
+        return value
+
+    def create(self, validated_data):
+        details_data = validated_data.pop('details')
+        user = self.context["request"].user
+        validated_data["user"] = user
+        offer = Offer.objects.create(**validated_data)
+        for detail_data in details_data:
+            OfferDetail.objects.create(offer=offer, **detail_data)
+        return offer
+
+    def to_representation(self, instance):
+        representation = super().to_representation(instance)
+        # Add the nested details for the response
+        representation['details'] = OfferDetailsSerializer(
+            instance.offer_details.all(), many=True
+        ).data
+        return representation
