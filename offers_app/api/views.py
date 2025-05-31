@@ -1,10 +1,10 @@
-from rest_framework import viewsets, filters, status
+from rest_framework import viewsets, filters
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from django_filters.rest_framework import DjangoFilterBackend
 from django.db.models import Min
 from django.db.models.functions import Greatest
-from rest_framework.permissions import AllowAny
+from rest_framework.exceptions import ValidationError
 from offers_app.models import Offer, OfferDetail
 from offers_app.api.serializers import (
     OfferSerializer,
@@ -54,10 +54,11 @@ class OfferViewSet(viewsets.ModelViewSet):
         if max_delivery_time:
             try:
                 max_delivery_time = int(max_delivery_time)
-                queryset = queryset.filter(
-                    min_delivery_time__lte=max_delivery_time)
             except ValueError:
-                pass
+                raise ValidationError(
+                    {"max_delivery_time": "Must be an integer."})
+            queryset = queryset.filter(
+                min_delivery_time__lte=max_delivery_time)
 
         creator_id = self.request.query_params.get('creator_id')
         if creator_id:

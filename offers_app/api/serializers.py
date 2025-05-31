@@ -165,6 +165,11 @@ class OfferDetailInputSerializer(serializers.ModelSerializer):
         fields = ['title', 'revisions', 'delivery_time_in_days',
                   'price', 'features', 'offer_type']
 
+    def validate_delivery_time_in_days(self, value):
+        if not isinstance(value, int):
+            raise serializers.ValidationError(
+                "Delivery time must be an integer.")
+        return value
 
 
 class OfferCreateSerializer(serializers.ModelSerializer):
@@ -198,7 +203,6 @@ class OfferCreateSerializer(serializers.ModelSerializer):
 
     def to_representation(self, instance):
         representation = super().to_representation(instance)
-        # Add the nested details for the response
         representation['details'] = OfferDetailsSerializer(
             instance.offer_details.all(), many=True
         ).data
